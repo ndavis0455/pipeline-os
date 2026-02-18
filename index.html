@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f2eb;
+  --ink: #1a1814;
+  --ink2: #4a4640;
+  --ink3: #9a9490;
+  --card: #ffffff;
+  --border: #e2ddd6;
+  --border2: #cdc8c0;
+  --stage1: #1a1814;
+  --stage2: #1e3a5f;
+  --stage3: #2d5a3d;
+  --stage4: #7a4a00;
+  --stage5: #5c2d8a;
+  --stage6: #1a6b3a;
+  --won: #1a6b3a;
+  --accent: #e85d26;
+  --accent-lt: #fdf0eb;
+  --yellow: #f5c842;
+  --yellow-lt: #fdf9e8;
+  --green: #2d8a4e;
+  --green-lt: #e8f5ed;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Instrument Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── LAYOUT ── */
+.app { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+
+/* ── TOP BAR ── */
+.topbar {
+  background: var(--ink);
+  color: #f5f2eb;
+  padding: 0 28px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; display: inline-block; }
+
+.nav-tabs { display: flex; gap: 2px; margin-left: 16px; }
+.nav-tab {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: rgba(245,242,235,0.5);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+}
+.nav-tab:hover { color: rgba(245,242,235,0.8); }
+.nav-tab.active { background: rgba(255,255,255,0.1); color: #f5f2eb; }
+
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.quota-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 4px 10px;
+  color: rgba(245,242,235,0.7);
+}
+.quota-chip strong { color: var(--yellow); }
+
+.add-deal-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 16px;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.add-deal-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* ── MAIN ── */
+.main { padding: 24px 28px; overflow: auto; }
+
+/* ── PANELS ── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── PIPELINE PANEL ── */
+.pipeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pipeline-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+}
+
+.filters { display: flex; gap: 8px; }
+.filter-btn {
+  font-size: 12px;
+  font-family: 'Instrument Sans', sans-serif;
+  padding: 5px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--border2);
+  background: white;
+  color: var(--ink2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.filter-btn:hover, .filter-btn.active { background: var(--ink); color: white; border-color: var(--ink); }
+
+/* ── KANBAN ── */
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(200px, 1fr));
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.stage-col {
+  background: rgba(0,0,0,0.03);
+  border-radius: 12px;
+  padding: 14px;
+  min-height: 400px;
+}
+
+.stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.stage-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.stage-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.stage-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--ink3);
+}
+
+.deal-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.deal-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.09); transform: translateY(-1px); }
+.deal-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+.deal-card[data-stage="0"]::before { background: var(--stage1); }
+.deal-card[data-stage="1"]::before { background: var(--stage2); }
+.deal-card[data-stage="2"]::before { background: var(--stage3); }
+.deal-card[data-stage="3"]::before { background: var(--stage4); }
+.deal-card[data-stage="4"]::before { background: var(--stage5); }
+.deal-card[data-stage="5"]::before { background: var(--stage6); }
+
+.deal-company {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 3px;
+  letter-spacing: -0.01em;
+}
+.deal-contact { font-size: 11px; color: var(--ink3); margin-bottom: 10px; }
+
+.deal-footer { display: flex; align-items: center; justify-content: space-between; }
+.deal-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--green);
+}
+.deal-badges { display: flex; gap: 4px; }
+.deal-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.badge-month { background: #f0f4ff; color: #3b5bdb; }
+.badge-hot { background: #fff0ec; color: #c0440c; }
+.badge-task { background: #fff9e6; color: #9a7200; }
+.badge-stale { background: #f5f5f5; color: #888; }
+
+.deal-days {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--ink3);
+  margin-top: 6px;
+}
+
+/* ── FORECAST PANEL ── */
+.forecast-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.forecast-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.fc-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink3);
+  margin-bottom: 8px;
+}
+.fc-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.fc-sub { font-size: 12px; color: var(--ink3); }
+.fc-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 99px;
+  margin-top: 14px;
+  overflow: hidden;
+}
+.fc-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent), var(--yellow));
+  transition: width 0.6s cubic-bezier(0.16,1,0.3,1);
+}
+
+.stage-breakdown {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px;
+  margin-bottom: 16px;
+}
+
+.breakdown-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.br-stage { width: 90px; color: var(--ink2); font-size: 12px; }
+.br-track { flex: 1; height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.br-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+.br-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink2); width: 64px; text-align: right; }
+.br-pct { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink3); width: 32px; text-align: right; }
+
+/* ── TASKS PANEL ── */
+.tasks-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.task-section {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.ts-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.ts-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+}
+.ts-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  background: var(--bg);
+  border-radius: 99px;
+  padding: 2px 8px;
+  color: var(--ink2);
+}
+
+.task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.task-item:last-child { border-bottom: none; }
+
+.task-check {
+  width: 18px; height: 18px;
+  border-radius: 5px;
+  border: 2px solid var(--border2);
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  font-size: 10px;
+  color: white;
+}
+.task-item.done .task-check { background: var(--green); border-color: var(--green); }
+.task-item.done .task-text { text-decoration: line-through; color: var(--ink3); }
+
+.task-text { font-size: 13px; line-height: 1.5; flex: 1; }
+.task-company { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+.task-due {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.due-today { background: #fff0ec; color: #c0440c; }
+.due-soon { background: var(--yellow-lt); color: #9a7200; }
+.due-ok { background: var(--green-lt); color: #1a6b3a; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(26,24,20,0.5);
+  z-index: 200;
+  backdrop-filter: blur(3px);
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  width: 480px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-close {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--ink3);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.form-row { margin-bottom: 14px; }
+.form-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink3);
+  margin-bottom: 5px;
+  display: block;
+}
+.form-input, .form-select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: white;
+  transition: border-color 0.15s;
+  outline: none;
+}
+.form-input:focus, .form-select:focus { border-color: var(--ink); }
+
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.btn-cancel {
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: none;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--ink2);
+}
+.btn-save {
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: none;
+  background: var(--ink);
+  color: white;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-save:hover { opacity: 0.85; }
+
+/* ── STAGE ADVANCE ── */
+.advance-btns { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.advance-btn {
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--border2);
+  background: white;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.advance-btn.next { background: var(--ink); color: white; border-color: var(--ink); }
+.advance-btn.won { background: var(--green); color: white; border-color: var(--green); }
+.advance-btn.lost { background: #f5f5f5; color: #888; }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.deal-card { animation: fadeIn 0.25s ease both; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo"><span class="logo-dot"></span>Pipeline OS</div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="switchPanel('pipeline', this)">Board</div>
+    <div class="nav-tab" onclick="switchPanel('forecast', this)">Forecast</div>
+    <div class="nav-tab" onclick="switchPanel('tasks', this)">Tasks</div>
+  </div>
+  <div class="topbar-right">
+    <div class="quota-chip">Q Target: <strong id="quotaDisplay">—</strong> MRR</div>
+    <button class="add-deal-btn" onclick="openAddDeal()">+ New Deal</button>
+    <button onclick="openSettings()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:rgba(245,242,235,0.7);border-radius:7px;padding:7px 10px;cursor:pointer;font-size:14px;transition:all 0.15s;display:flex;align-items:center;gap:6px" title="Zapier Settings">
+      <span id="zap-indicator" style="width:7px;height:7px;border-radius:50%;background:#aaa;display:inline-block;transition:background 0.3s" title="Zapier not connected"></span>
+      ⚙
+    </button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- PIPELINE BOARD -->
+  <div class="panel active" id="panel-pipeline">
+    <div class="pipeline-header">
+      <div class="pipeline-title">My Pipeline</div>
+      <div class="filters">
+        <button class="filter-btn active" onclick="filterDeals('all', this)">All</button>
+        <button class="filter-btn" onclick="filterDeals('hot', this)">🔥 Hot</button>
+        <button class="filter-btn" onclick="filterDeals('task', this)">⚡ Needs Action</button>
+        <button class="filter-btn" onclick="filterDeals('stale', this)">💤 Stale</button>
+      </div>
+    </div>
+    <div class="kanban" id="kanban"></div>
+  </div>
+
+  <!-- FORECAST -->
+  <div class="panel" id="panel-forecast">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.4rem;letter-spacing:-0.02em;margin-bottom:20px;">Revenue Forecast</div>
+
+    <!-- Quota Attainment -->
+    <div class="forecast-card" style="margin-bottom:16px;border-color:var(--accent);background:linear-gradient(135deg,#fffaf8,white)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="fc-label">Quota Attainment — $85k MRR / Quarter</div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px">
+            <div class="fc-value" id="fc-attainment-pct" style="color:var(--accent)">0%</div>
+            <div style="font-size:13px;color:var(--ink3)" id="fc-attainment-closed">$0 MRR closed</div>
+          </div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink2);text-align:right" id="fc-attainment-remaining"></div>
+      </div>
+      <div class="fc-bar" style="height:10px">
+        <div class="fc-bar-fill" id="fc-attainment-bar" style="width:0%;background:linear-gradient(90deg,var(--accent),var(--yellow))"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3)">$0</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3)">$85k MRR</div>
+      </div>
+    </div>
+
+    <div class="forecast-grid">
+      <div class="forecast-card">
+        <div class="fc-label">Committed MRR (Decision Stage+)</div>
+        <div class="fc-value" id="fc-committed">$0</div>
+        <div class="fc-sub" id="fc-committed-sub">0 deals</div>
+        <div class="fc-bar"><div class="fc-bar-fill" id="fc-committed-bar" style="width:0%"></div></div>
+      </div>
+      <div class="forecast-card">
+        <div class="fc-label">Best Case MRR (all active)</div>
+        <div class="fc-value" id="fc-best">$0</div>
+        <div class="fc-sub" id="fc-best-sub">0 deals</div>
+        <div class="fc-bar"><div class="fc-bar-fill" id="fc-best-bar" style="width:0%"></div></div>
+      </div>
+      <div class="forecast-card">
+        <div class="fc-label">Pipeline Coverage</div>
+        <div class="fc-value" id="fc-coverage">0x</div>
+        <div class="fc-sub">vs. $85k MRR quota</div>
+      </div>
+      <div class="forecast-card">
+        <div class="fc-label">Avg Deal Size (MRR)</div>
+        <div class="fc-value" id="fc-avg">$0</div>
+        <div class="fc-sub" id="fc-avg-sub">across all stages</div>
+      </div>
+    </div>
+
+    <!-- Close Month Breakdown -->
+    <div class="stage-breakdown" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div class="breakdown-title">Expected Close by Month</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3)">Weighted MRR · Closed ✓</div>
+      </div>
+      <div id="month-rows"></div>
+    </div>
+
+    <!-- Stage Breakdown -->
+    <div class="stage-breakdown">
+      <div class="breakdown-title">Pipeline MRR by Stage</div>
+      <div id="breakdown-rows"></div>
+    </div>
+  </div>
+
+  <!-- TASKS -->
+  <div class="panel" id="panel-tasks">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.4rem;letter-spacing:-0.02em;margin-bottom:20px;">Activity & Tasks</div>
+    <div class="tasks-layout">
+      <div class="task-section">
+        <div class="ts-header">
+          <div class="ts-title">Today's Actions</div>
+          <div class="ts-count" id="today-count">0</div>
+        </div>
+        <div id="today-tasks"></div>
+      </div>
+      <div class="task-section">
+        <div class="ts-header">
+          <div class="ts-title">Upcoming (7 days)</div>
+          <div class="ts-count" id="upcoming-count">0</div>
+        </div>
+        <div id="upcoming-tasks"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ADD DEAL MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title">
+      New Deal
+      <button class="modal-close" onclick="closeAddDeal()">✕</button>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Company Name</label>
+      <input class="form-input" id="f-company" placeholder="Acme Corp" />
+    </div>
+    <div class="form-row">
+      <label class="form-label">Contact Name</label>
+      <input class="form-input" id="f-contact" placeholder="Jane Smith, VP Sales" />
+    </div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Deal Value — MRR ($)</label>
+        <input class="form-input" id="f-value" type="number" placeholder="7500" />
+      </div>
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Stage</label>
+        <select class="form-select" id="f-stage">
+          <option value="0">Introduction Made</option>
+          <option value="1">Meeting Booked – Pre-Demo</option>
+          <option value="2">Qualified – Demo Completed</option>
+          <option value="3">Decision Stage</option>
+          <option value="4">Buying Process</option>
+          <option value="5">Closed</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Next Action</label>
+        <input class="form-input" id="f-task" placeholder="Send proposal" />
+      </div>
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Due Date</label>
+        <input class="form-input" id="f-due" type="date" />
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Expected Close Month (this quarter)</label>
+      <select class="form-select" id="f-month">
+        <option value="M1">Month 1</option>
+        <option value="M2">Month 2</option>
+        <option value="M3">Month 3</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeAddDeal()">Cancel</button>
+      <button class="btn-save" onclick="saveDeal()">Add Deal</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsOverlay" onclick="closeSettings(event)">
+  <div class="modal">
+    <div class="modal-title">
+      Zapier Integration
+      <button class="modal-close" onclick="closeSettingsModal()">✕</button>
+    </div>
+    <div style="background:#f5f2eb;border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:13px;line-height:1.6;color:var(--ink2)">
+      <strong style="color:var(--ink)">How to set up:</strong><br>
+      1. Go to <strong>zapier.com</strong> → Create Zap → Trigger: <em>Webhooks by Zapier → Catch Hook</em><br>
+      2. Copy the webhook URL Zapier gives you and paste it below<br>
+      3. Set the Action to <em>Salesforce → Update/Create Opportunity</em><br>
+      4. Map the fields Zapier receives to your SFDC fields
+    </div>
+    <div class="form-row">
+      <label class="form-label">Zapier Webhook URL</label>
+      <input class="form-input" id="zapier-url" placeholder="https://hooks.zapier.com/hooks/catch/..." />
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="form-label" style="margin-bottom:10px">Send webhook on...</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="zap-stage" checked style="accent-color:var(--accent)"> Stage change
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="zap-new" checked style="accent-color:var(--accent)"> New deal added
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="zap-won" checked style="accent-color:var(--accent)"> Deal marked Won
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="zap-task" checked style="accent-color:var(--accent)"> Task completed
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;align-items:center">
+      <button class="btn-cancel" id="zap-test-btn" onclick="testWebhook()" style="color:var(--accent2);border-color:var(--accent2)">Send test ping</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn-cancel" onclick="closeSettingsModal()">Cancel</button>
+        <button class="btn-save" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+    <div id="zap-status" style="margin-top:12px;font-size:12px;text-align:center;display:none"></div>
+  </div>
+</div>
+<div class="modal-overlay" id="detailOverlay" onclick="closeDetail(event)">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="detail-company">—</span>
+      <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div style="color:var(--ink3);font-size:13px;margin-bottom:16px" id="detail-contact"></div>
+    <div class="form-row-2" style="margin-bottom:16px">
+      <div>
+        <div class="form-label">MRR Value</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;color:var(--green);font-weight:500" id="detail-value"></div>
+      </div>
+      <div>
+        <div class="form-label">Stage</div>
+        <div id="detail-stage" style="font-weight:600;font-size:13px"></div>
+      </div>
+    </div>
+    <div class="form-row-2" style="margin-bottom:16px">
+      <div>
+        <div class="form-label">Expected Close</div>
+        <div id="detail-month" style="font-size:13px;font-weight:600"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="form-label">Next Action</div>
+      <div id="detail-task" style="font-size:13px;padding:10px 12px;background:var(--bg);border-radius:8px"></div>
+    </div>
+    <div class="form-label" style="margin-bottom:8px">Move Stage</div>
+    <div class="advance-btns" id="advance-btns"></div>
+  </div>
+</div>
+
+<script>
+const STAGES = ['Introduction Made','Meeting Booked','Qualified · Demo Done','Decision Stage','Buying Process','Closed'];
+const STAGE_COLORS = ['#1a1814','#1e3a5f','#2d5a3d','#7a4a00','#5c2d8a','#1a6b3a'];
+const STAGE_WEIGHTS = [0.05, 0.15, 0.35, 0.55, 0.80, 1.0];
+
+const QUOTA = 85000;
+const ARR_TO_MRR = 1/12; // convert ARR deal values to MRR
+
+function toMRR(arr) { return Math.round(arr * ARR_TO_MRR); }
+function fmtMRR(arr) { const m = toMRR(arr); return m >= 1000 ? '$' + (m/1000).toFixed(1) + 'k' : '$' + m; }
+function fmtMRRFull(arr) { return '$' + toMRR(arr).toLocaleString(); }
+
+let deals = [
+  { id:1, company:'Vertex Systems', contact:'Tom Ellis, CTO', value:420000, stage:4, task:'Send revised contract', due:'today', tag:'hot', days:4, closeMonth:'M1' },
+  { id:2, company:'Luminary Health', contact:'Sara Chen, VP Ops', value:276000, stage:3, task:'Follow up on decision timeline', due:'today', tag:'hot', days:2, closeMonth:'M1' },
+  { id:3, company:'Forge Analytics', contact:'Mike Patel, Founder', value:180000, stage:2, task:'Send demo recap email', due:'soon', tag:'task', days:7, closeMonth:'M2' },
+  { id:4, company:'Cascade Media', contact:'Dana Rowe, Dir IT', value:540000, stage:5, task:'Countersign agreement', due:'today', tag:'hot', days:1, closeMonth:'M1' },
+  { id:5, company:'Orion Logistics', contact:'Paul Wu, COO', value:312000, stage:3, task:'Schedule stakeholder call', due:'soon', tag:'task', days:5, closeMonth:'M2' },
+  { id:6, company:'Summit Cloud', contact:'Erin Blake, CEO', value:216000, stage:0, task:'Book intro call', due:'soon', tag:'', days:3, closeMonth:'M3' },
+  { id:7, company:'Pinnacle Retail', contact:'James Ford, CIO', value:468000, stage:4, task:'Review pricing with legal', due:'soon', tag:'hot', days:3, closeMonth:'M1' },
+  { id:8, company:'Dawnlight AI', contact:'Priya Nair, CPO', value:144000, stage:1, task:'Confirm demo date', due:'ok', tag:'', days:2, closeMonth:'M2' },
+  { id:9, company:'Cobalt Finance', contact:'Ryan Moore, SVP', value:372000, stage:1, task:'Re-engage after no-show', due:'today', tag:'stale', days:18, closeMonth:'M3' },
+  { id:10, company:'Meridian Labs', contact:'Olivia Hart, Dir R&D', value:120000, stage:2, task:'Send tailored use case deck', due:'ok', tag:'', days:6, closeMonth:'M2' },
+];
+
+let nextId = 11;
+let activeFilter = 'all';
+let selectedDealId = null;
+
+// ── RENDER KANBAN ──
+function renderKanban() {
+  const kanban = document.getElementById('kanban');
+  kanban.innerHTML = '';
+
+  const filtered = deals.filter(d => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'hot') return d.tag === 'hot';
+    if (activeFilter === 'task') return d.due === 'today' || d.due === 'soon';
+    if (activeFilter === 'stale') return d.tag === 'stale' || d.days >= 14;
+    return true;
+  });
+
+  STAGES.forEach((stage, si) => {
+    const stageDeals = filtered.filter(d => d.stage === si);
+    const stageValue = stageDeals.reduce((s, d) => s + d.value, 0);
+
+    const col = document.createElement('div');
+    col.className = 'stage-col';
+    col.innerHTML = `
+      <div class="stage-header">
+        <div class="stage-label">
+          <span class="stage-dot" style="background:${STAGE_COLORS[si]}"></span>
+          ${stage}
+        </div>
+        <div class="stage-meta">${stageDeals.length} · ${fmtMRR(stageValue)} MRR</div>
+      </div>
+    `;
+
+    stageDeals.forEach(d => {
+      const card = document.createElement('div');
+      card.className = 'deal-card';
+      card.dataset.stage = si;
+      card.onclick = () => openDetail(d.id);
+
+      const badges = [];
+      if (d.tag === 'hot') badges.push('<span class="deal-badge badge-hot">🔥 Hot</span>');
+      if (d.due === 'today' && d.tag !== 'stale') badges.push('<span class="deal-badge badge-task">⚡ Action</span>');
+      if (d.tag === 'stale' || d.days >= 14) badges.push('<span class="deal-badge badge-stale">💤 Stale</span>');
+      if (d.closeMonth) badges.push(`<span class="deal-badge badge-month">${d.closeMonth}</span>`);
+
+      card.innerHTML = `
+        <div class="deal-company">${d.company}</div>
+        <div class="deal-contact">${d.contact}</div>
+        <div class="deal-footer">
+          <div class="deal-value">${fmtMRR(d.value)} <span style="font-size:9px;color:var(--ink3)">MRR</span></div>
+          <div class="deal-badges">${badges.join('')}</div>
+        </div>
+        <div class="deal-days">${d.days}d in stage${d.task ? ' · ' + d.task : ''}</div>
+      `;
+      col.appendChild(card);
+    });
+
+    kanban.appendChild(col);
+  });
+}
+
+// ── FORECAST ──
+function renderForecast() {
+  const activDeals = deals.filter(d => d.stage < 5);
+  const closedDeals = deals.filter(d => d.stage === 5);
+
+  const totalMRR = deals.reduce((s, d) => s + toMRR(d.value), 0);
+  const closedMRR = closedDeals.reduce((s, d) => s + toMRR(d.value), 0);
+  const committedMRR = deals.filter(d => d.stage >= 3).reduce((s, d) => s + toMRR(d.value) * STAGE_WEIGHTS[d.stage], 0);
+  const bestMRR = activDeals.reduce((s, d) => s + toMRR(d.value) * STAGE_WEIGHTS[d.stage], 0) + closedMRR;
+  const avgMRR = totalMRR / Math.max(deals.length, 1);
+  const coverage = totalMRR / QUOTA;
+  const attainmentPct = Math.min((closedMRR / QUOTA) * 100, 100);
+  const remainingMRR = Math.max(QUOTA - closedMRR, 0);
+
+  // Quota attainment
+  document.getElementById('fc-attainment-pct').textContent = attainmentPct.toFixed(0) + '%';
+  document.getElementById('fc-attainment-closed').textContent = fmtMRRFull(closedDeals.reduce((s,d)=>s+d.value,0)) + ' MRR closed';
+  document.getElementById('fc-attainment-remaining').textContent = remainingMRR > 0
+    ? `${fmtMRRFull(remainingMRR * 12)} MRR to go`
+    : '🎉 Quota hit!';
+  document.getElementById('fc-attainment-bar').style.width = attainmentPct + '%';
+
+  // Committed
+  document.getElementById('fc-committed').textContent = fmtMRRFull(Math.round(committedMRR) * 12);
+  document.getElementById('fc-committed-sub').textContent = deals.filter(d => d.stage >= 3 && d.stage < 5).length + ' deals in Decision+';
+  document.getElementById('fc-committed-bar').style.width = Math.min((committedMRR / QUOTA) * 100, 100) + '%';
+
+  // Best case
+  document.getElementById('fc-best').textContent = fmtMRRFull(Math.round(bestMRR * 12));
+  document.getElementById('fc-best-sub').textContent = activDeals.length + ' active deals + ' + closedDeals.length + ' closed';
+  document.getElementById('fc-best-bar').style.width = Math.min((bestMRR / QUOTA) * 100, 100) + '%';
+
+  // Coverage & avg
+  document.getElementById('fc-coverage').textContent = coverage.toFixed(1) + 'x';
+  document.getElementById('fc-avg').textContent = fmtMRRFull(Math.round(avgMRR) * 12);
+  document.getElementById('fc-avg-sub').textContent = deals.length + ' deals in pipeline';
+
+  document.getElementById('quotaDisplay').textContent = '$' + (QUOTA/1000).toFixed(0) + 'k';
+
+  // Stage breakdown
+  const rows = document.getElementById('breakdown-rows');
+  rows.innerHTML = '';
+  STAGES.forEach((s, si) => {
+    const sv = deals.filter(d => d.stage === si).reduce((a, d) => a + toMRR(d.value), 0);
+    const pct = totalMRR > 0 ? (sv / totalMRR * 100).toFixed(0) : 0;
+    rows.innerHTML += `
+      <div class="breakdown-row">
+        <div class="br-stage">${s}</div>
+        <div class="br-track"><div class="br-fill" style="width:${pct}%;background:${STAGE_COLORS[si]}"></div></div>
+        <div class="br-val">${fmtMRR(sv * 12)} MRR</div>
+        <div class="br-pct">${pct}%</div>
+      </div>
+    `;
+  });
+
+  // Close month breakdown
+  const months = ['M1','M2','M3'];
+  const monthLabels = { M1: 'Month 1', M2: 'Month 2', M3: 'Month 3' };
+  const monthEl = document.getElementById('month-rows');
+  monthEl.innerHTML = '';
+  months.forEach(m => {
+    const mDeals = deals.filter(d => d.closeMonth === m);
+    const mMRR = mDeals.reduce((s, d) => s + toMRR(d.value) * STAGE_WEIGHTS[d.stage], 0);
+    const mClosed = mDeals.filter(d => d.stage === 5).reduce((s, d) => s + toMRR(d.value), 0);
+    const pct = QUOTA > 0 ? Math.min((mMRR / QUOTA) * 100, 100).toFixed(0) : 0;
+    monthEl.innerHTML += `
+      <div class="breakdown-row" style="align-items:center">
+        <div class="br-stage" style="font-weight:600;color:var(--ink)">${monthLabels[m]}</div>
+        <div class="br-track"><div class="br-fill" style="width:${pct}%;background:var(--accent)"></div></div>
+        <div class="br-val">${fmtMRR(mMRR * 12)} MRR</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--green);width:56px;text-align:right">${mClosed > 0 ? fmtMRR(mClosed*12)+' ✓' : '—'}</div>
+      </div>
+    `;
+  });
+}
+
+// ── TASKS ──
+function renderTasks() {
+  const todayTasks = deals.filter(d => d.due === 'today' && d.task);
+  const upcomingTasks = deals.filter(d => d.due === 'soon' && d.task);
+
+  document.getElementById('today-count').textContent = todayTasks.length;
+  document.getElementById('upcoming-count').textContent = upcomingTasks.length;
+
+  function renderList(arr, containerId) {
+    const el = document.getElementById(containerId);
+    if (arr.length === 0) {
+      el.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:16px 0">All clear ✓</div>';
+      return;
+    }
+    el.innerHTML = arr.map(d => `
+      <div class="task-item ${d.taskDone ? 'done' : ''}" onclick="toggleTask(${d.id})" id="task-${d.id}">
+        <div class="task-check">${d.taskDone ? '✓' : ''}</div>
+        <div style="flex:1">
+          <div class="task-text">${d.task}</div>
+          <div class="task-company">${d.company} · ${STAGES[d.stage]}</div>
+        </div>
+        <div class="task-due ${d.due === 'today' ? 'due-today' : d.due === 'soon' ? 'due-soon' : 'due-ok'}">${d.due === 'today' ? 'Today' : 'This week'}</div>
+      </div>
+    `).join('');
+  }
+
+  renderList(todayTasks, 'today-tasks');
+  renderList(upcomingTasks, 'upcoming-tasks');
+}
+
+function toggleTask(id) {
+  const deal = deals.find(d => d.id === id);
+  if (deal) {
+    deal.taskDone = !deal.taskDone;
+    if (deal.taskDone && zapSettings.onTask) sendToZapier('task_completed', deal);
+    renderTasks();
+  }
+}
+
+// ── MODALS ──
+function openAddDeal() {
+  // Set default due date to today
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('f-due').value = today;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeAddDeal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function closeModal(e) { if (e.target === document.getElementById('modalOverlay')) closeAddDeal(); }
+
+function saveDeal() {
+  const company = document.getElementById('f-company').value.trim();
+  const contact = document.getElementById('f-contact').value.trim();
+  const value = parseInt(document.getElementById('f-value').value) || 0;
+  const stage = parseInt(document.getElementById('f-stage').value);
+  const task = document.getElementById('f-task').value.trim();
+
+  if (!company) { document.getElementById('f-company').focus(); return; }
+
+  const newDeal = { id: nextId++, company, contact: contact || 'Unknown', value: value * 12, stage, task, due: 'soon', tag: '', days: 0, taskDone: false, closeMonth: document.getElementById('f-month').value };
+  deals.push(newDeal);
+  if (zapSettings.onNew) sendToZapier('deal_created', newDeal);
+  closeAddDeal();
+  renderAll();
+
+  // Clear
+  ['f-company','f-contact','f-value','f-task'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-stage').value = '0';
+  document.getElementById('f-month').value = 'M1';
+}
+
+function openDetail(id) {
+  selectedDealId = id;
+  const d = deals.find(x => x.id === id);
+  document.getElementById('detail-company').textContent = d.company;
+  document.getElementById('detail-contact').textContent = d.contact;
+  document.getElementById('detail-value').textContent = fmtMRRFull(d.value) + ' MRR';
+  document.getElementById('detail-stage').textContent = STAGES[d.stage];
+  document.getElementById('detail-stage').style.color = STAGE_COLORS[d.stage];
+  document.getElementById('detail-task').textContent = d.task || 'No next action set';
+  const monthMap = { M1: 'Month 1', M2: 'Month 2', M3: 'Month 3' };
+  document.getElementById('detail-month').textContent = monthMap[d.closeMonth] || '—';
+
+  const btns = document.getElementById('advance-btns');
+  btns.innerHTML = '';
+
+  if (d.stage < STAGES.length - 1) {
+    const nb = document.createElement('button');
+    nb.className = 'advance-btn next';
+    nb.textContent = '→ Move to ' + STAGES[d.stage + 1];
+    nb.onclick = () => moveStage(id, d.stage + 1);
+    btns.appendChild(nb);
+  }
+
+  if (d.stage > 0) {
+    const pb = document.createElement('button');
+    pb.className = 'advance-btn';
+    pb.textContent = '← Back to ' + STAGES[d.stage - 1];
+    pb.onclick = () => moveStage(id, d.stage - 1);
+    btns.appendChild(pb);
+  }
+
+  const wonBtn = document.createElement('button');
+  wonBtn.className = 'advance-btn won';
+  wonBtn.textContent = '🎉 Mark Won';
+  wonBtn.onclick = () => markWon(id);
+  btns.appendChild(wonBtn);
+
+  const lostBtn = document.createElement('button');
+  lostBtn.className = 'advance-btn lost';
+  lostBtn.textContent = '✕ Mark Lost';
+  lostBtn.onclick = () => markLost(id);
+  btns.appendChild(lostBtn);
+
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function closeDetailModal() { document.getElementById('detailOverlay').classList.remove('open'); }
+function closeDetail(e) { if (e.target === document.getElementById('detailOverlay')) closeDetailModal(); }
+
+function moveStage(id, newStage) {
+  const d = deals.find(x => x.id === id);
+  d.stage = newStage;
+  d.days = 0;
+  if (zapSettings.onStage) sendToZapier('stage_changed', d);
+  closeDetailModal();
+  renderAll();
+}
+
+function markWon(id) {
+  const d = deals.find(x => x.id === id);
+  if (zapSettings.onWon) sendToZapier('deal_won', d);
+  deals = deals.filter(x => x.id !== id);
+  closeDetailModal();
+  renderAll();
+  const msg = document.createElement('div');
+  msg.style.cssText = 'position:fixed;top:70px;right:24px;background:#1a6b3a;color:white;padding:12px 20px;border-radius:10px;font-family:Syne,sans-serif;font-weight:700;font-size:14px;z-index:999;animation:fadeIn 0.2s ease';
+  msg.textContent = '🎉 Deal Won!';
+  document.body.appendChild(msg);
+  setTimeout(() => msg.remove(), 2500);
+}
+
+function markLost(id) {
+  const d = deals.find(x => x.id === id);
+  sendToZapier('deal_lost', d);
+  deals = deals.filter(x => x.id !== id);
+  closeDetailModal();
+  renderAll();
+}
+
+// ── ZAPIER ──
+let zapSettings = {
+  url: localStorage.getItem('zapier_url') || '',
+  onStage: true, onNew: true, onWon: true, onTask: true
+};
+
+function openSettings() {
+  document.getElementById('zapier-url').value = zapSettings.url;
+  document.getElementById('settingsOverlay').classList.add('open');
+  updateZapStatus();
+}
+function closeSettingsModal() { document.getElementById('settingsOverlay').classList.remove('open'); }
+function closeSettings(e) { if (e.target === document.getElementById('settingsOverlay')) closeSettingsModal(); }
+
+function saveSettings() {
+  zapSettings.url = document.getElementById('zapier-url').value.trim();
+  zapSettings.onStage = document.getElementById('zap-stage').checked;
+  zapSettings.onNew = document.getElementById('zap-new').checked;
+  zapSettings.onWon = document.getElementById('zap-won').checked;
+  zapSettings.onTask = document.getElementById('zap-task').checked;
+  localStorage.setItem('zapier_url', zapSettings.url);
+  closeSettingsModal();
+  updateZapStatus();
+  showToast(zapSettings.url ? '✓ Zapier connected' : 'Zapier disconnected', zapSettings.url ? 'green' : 'gray');
+}
+
+function updateZapStatus() {
+  const indicator = document.getElementById('zap-indicator');
+  if (indicator) {
+    indicator.style.background = zapSettings.url ? '#2d8a4e' : '#aaa';
+    indicator.title = zapSettings.url ? 'Zapier connected' : 'Zapier not connected — click ⚙ to set up';
+  }
+}
+
+async function sendToZapier(event, data) {
+  if (!zapSettings.url) return;
+  const payload = {
+    event,
+    timestamp: new Date().toISOString(),
+    deal: {
+      company: data.company,
+      contact: data.contact,
+      mrr_value: toMRR(data.value),
+      arr_value: data.value,
+      stage: STAGES[data.stage],
+      stage_number: data.stage + 1,
+      next_action: data.task,
+      close_month: data.closeMonth,
+      days_in_stage: data.days,
+      tag: data.tag
+    }
+  };
+  try {
+    await fetch(zapSettings.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      mode: 'no-cors'
+    });
+    showToast('↑ Synced to Zapier', 'green');
+  } catch (e) {
+    showToast('⚠ Zapier sync failed', 'red');
+  }
+}
+
+async function testWebhook() {
+  const url = document.getElementById('zapier-url').value.trim();
+  if (!url) { showZapStatus('Enter a webhook URL first', 'red'); return; }
+  showZapStatus('Sending test...', 'gray');
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'test', message: 'Pipeline OS test ping', timestamp: new Date().toISOString() }),
+      mode: 'no-cors'
+    });
+    showZapStatus('✓ Test sent — check your Zapier history', 'green');
+  } catch(e) {
+    showZapStatus('⚠ Failed to reach URL', 'red');
+  }
+}
+
+function showZapStatus(msg, color) {
+  const el = document.getElementById('zap-status');
+  el.style.display = 'block';
+  el.style.color = color === 'green' ? 'var(--green)' : color === 'red' ? '#c0440c' : 'var(--ink3)';
+  el.textContent = msg;
+}
+
+function showToast(msg, color) {
+  const t = document.createElement('div');
+  const bg = color === 'green' ? '#1a6b3a' : color === 'red' ? '#c0440c' : '#555';
+  t.style.cssText = `position:fixed;top:70px;right:24px;background:${bg};color:white;padding:10px 18px;border-radius:9px;font-family:Syne,sans-serif;font-weight:600;font-size:13px;z-index:999;animation:fadeIn 0.2s ease;pointer-events:none`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+// ── NAV ──
+function switchPanel(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  el.classList.add('active');
+  renderAll();
+}
+
+function filterDeals(filter, el) {
+  activeFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderKanban();
+}
+
+function renderAll() {
+  renderKanban();
+  renderForecast();
+  renderTasks();
+}
+
+// Init
+renderAll();
+updateZapStatus();
+</script>
+</body>
+</html>
