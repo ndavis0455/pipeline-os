@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f2eb; --ink: #1a1814; --ink2: #4a4640; --ink3: #9a9490;
+  --border: #e2ddd6; --border2: #cdc8c0;
+  --accent: #e85d26; --yellow: #f5c842; --yellow-lt: #fdf9e8;
+  --green: #2d8a4e; --green-lt: #e8f5ed;
+  --red: #c0440c; --red-lt: #fff0ec;
+  --purple: #5c2d8a; --blue: #1e3a5f;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--ink); font-family: 'Instrument Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+.app { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+
+/* TOPBAR */
+.topbar { background: var(--ink); color: #f5f2eb; padding: 0 20px; height: 56px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; }
+.logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; letter-spacing: -0.02em; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.logo-dot { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; }
+.nav-tabs { display: flex; gap: 2px; }
+.nav-tab { padding: 5px 11px; border-radius: 6px; font-size: 12px; color: rgba(245,242,235,0.5); cursor: pointer; transition: all 0.15s; font-weight: 500; white-space: nowrap; }
+.nav-tab:hover { color: rgba(245,242,235,0.8); }
+.nav-tab.active { background: rgba(255,255,255,0.1); color: #f5f2eb; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 7px; }
+.quota-chip { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 4px 9px; color: rgba(245,242,235,0.7); white-space: nowrap; }
+.quota-chip strong { color: var(--yellow); }
+.topbar-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: rgba(245,242,235,0.7); border-radius: 7px; padding: 6px 10px; cursor: pointer; font-size: 12px; transition: all 0.15s; display: flex; align-items: center; gap: 5px; white-space: nowrap; font-family: 'Instrument Sans', sans-serif; }
+.topbar-btn:hover { background: rgba(255,255,255,0.15); color: #f5f2eb; }
+.add-deal-btn { background: var(--accent); color: white; border: none; border-radius: 7px; padding: 7px 14px; font-family: 'Instrument Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.add-deal-btn:hover { opacity: 0.88; }
+
+/* MAIN */
+.main { padding: 18px 20px; overflow: auto; }
+.panel { display: none; }
+.panel.active { display: block; }
+.panel-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.25rem; letter-spacing: -0.02em; margin-bottom: 16px; }
+
+/* BOARD */
+.pipeline-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.filters { display: flex; gap: 5px; flex-wrap: wrap; }
+.filter-btn { font-size: 11px; font-family: 'Instrument Sans', sans-serif; padding: 5px 11px; border-radius: 99px; border: 1px solid var(--border2); background: white; color: var(--ink2); cursor: pointer; transition: all 0.15s; }
+.filter-btn.active, .filter-btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
+.bulk-bar { background: var(--ink); color: white; border-radius: 10px; padding: 9px 14px; display: none; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12px; flex-wrap: wrap; }
+.bulk-bar.visible { display: flex; }
+.bulk-stage-btn { padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; font-size: 11px; cursor: pointer; font-family: 'Instrument Sans', sans-serif; }
+.bulk-stage-btn:hover { background: rgba(255,255,255,0.2); }
+.bulk-clear { margin-left: auto; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.5); font-size: 11px; cursor: pointer; font-family: 'Instrument Sans', sans-serif; }
+.kanban { display: grid; grid-template-columns: repeat(6, minmax(185px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 8px; }
+.stage-col { background: rgba(0,0,0,0.03); border-radius: 12px; padding: 11px; min-height: 360px; }
+.stage-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.stage-label { display: flex; align-items: center; gap: 6px; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.stage-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.stage-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink3); }
+.deal-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 11px; margin-bottom: 7px; cursor: pointer; transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s; position: relative; overflow: hidden; animation: fadeIn 0.2s ease; }
+.deal-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.08); transform: translateY(-1px); }
+.deal-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(232,93,38,0.15); }
+.deal-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+.deal-card[data-stage="0"]::before { background: #1a1814; }
+.deal-card[data-stage="1"]::before { background: #1e3a5f; }
+.deal-card[data-stage="2"]::before { background: #2d5a3d; }
+.deal-card[data-stage="3"]::before { background: #7a4a00; }
+.deal-card[data-stage="4"]::before { background: #5c2d8a; }
+.deal-card[data-stage="5"]::before { background: #1a6b3a; }
+.deal-select { position: absolute; top: 9px; right: 9px; width: 15px; height: 15px; border-radius: 4px; border: 1.5px solid var(--border2); background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; transition: all 0.15s; z-index: 2; }
+.deal-card.selected .deal-select { background: var(--accent); border-color: var(--accent); color: white; }
+.deal-company { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; margin-bottom: 2px; letter-spacing: -0.01em; padding-right: 18px; }
+.deal-contact { font-size: 10px; color: var(--ink3); margin-bottom: 7px; }
+.deal-footer { display: flex; align-items: center; justify-content: space-between; }
+.deal-value { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--green); }
+.deal-badges { display: flex; gap: 3px; flex-wrap: wrap; }
+.deal-badge { font-size: 9px; padding: 2px 5px; border-radius: 4px; font-weight: 600; }
+.badge-hot { background: var(--red-lt); color: var(--red); }
+.badge-task { background: var(--yellow-lt); color: #9a7200; }
+.badge-stale { background: #f0f0f0; color: #888; }
+.badge-month { background: #eef2ff; color: #3b5bdb; }
+.badge-source { background: #f3f0ff; color: var(--purple); }
+.deal-meta { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--ink3); margin-top: 5px; display: flex; gap: 8px; flex-wrap: wrap; }
+.age-ok { color: var(--green); }
+.age-warn { color: #9a7200; }
+.age-danger { color: var(--red); }
+.health-bar { height: 3px; border-radius: 99px; margin-top: 7px; background: var(--border); overflow: hidden; }
+.health-fill { height: 100%; border-radius: 99px; }
+
+/* FORECAST */
+.forecast-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.forecast-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.fc-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink3); margin-bottom: 5px; }
+.fc-value { font-family: 'Syne', sans-serif; font-size: 1.7rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin-bottom: 3px; }
+.fc-sub { font-size: 11px; color: var(--ink3); }
+.fc-bar { height: 5px; background: var(--border); border-radius: 99px; margin-top: 10px; overflow: hidden; }
+.fc-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--yellow)); transition: width 0.6s; }
+.stage-breakdown { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 12px; }
+.breakdown-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; margin-bottom: 12px; }
+.breakdown-row { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+.br-stage { width: 115px; color: var(--ink2); font-size: 11px; }
+.br-track { flex: 1; height: 7px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.br-fill { height: 100%; border-radius: 99px; transition: width 0.5s; }
+.br-val { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink2); width: 65px; text-align: right; }
+.br-pct { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink3); width: 28px; text-align: right; }
+
+/* WIN RATE */
+.winrate-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 14px; }
+.winrate-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+.winrate-big { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; }
+.winrate-label { font-size: 11px; color: var(--ink3); margin-top: 4px; }
+.funnel-row { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
+.funnel-label { width: 120px; font-size: 11px; color: var(--ink2); }
+.funnel-bar-wrap { flex: 1; height: 20px; background: var(--border); border-radius: 6px; overflow: hidden; }
+.funnel-bar { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: white; transition: width 0.5s; min-width: 20px; }
+.funnel-pct { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink3); width: 36px; text-align: right; }
+
+/* TASKS */
+.tasks-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.task-section { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.ts-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.ts-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; }
+.ts-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; background: var(--bg); border-radius: 99px; padding: 2px 7px; }
+.task-item { display: flex; align-items: flex-start; gap: 9px; padding: 8px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.task-item:last-child { border-bottom: none; }
+.task-check { width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--border2); flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: white; transition: all 0.15s; }
+.task-item.done .task-check { background: var(--green); border-color: var(--green); }
+.task-item.done .task-text { text-decoration: line-through; color: var(--ink3); }
+.task-text { font-size: 12px; line-height: 1.5; flex: 1; }
+.task-company { font-size: 10px; color: var(--ink3); margin-top: 2px; }
+.task-due { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 5px; border-radius: 4px; white-space: nowrap; }
+.due-today { background: var(--red-lt); color: var(--red); }
+.due-soon { background: var(--yellow-lt); color: #9a7200; }
+.due-ok { background: var(--green-lt); color: #1a6b3a; }
+
+/* WEEKLY */
+.summary-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 14px; }
+.summary-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.summary-num { font-family: 'Syne', sans-serif; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.03em; }
+.summary-label { font-size: 11px; color: var(--ink3); margin-top: 3px; }
+.summary-delta { font-family: 'JetBrains Mono', monospace; font-size: 10px; margin-top: 5px; }
+.delta-up { color: var(--green); }
+.delta-down { color: var(--red); }
+
+/* FOCUS */
+.focus-mode { position: fixed; inset: 0; background: var(--ink); z-index: 300; display: none; flex-direction: column; overflow: auto; }
+.focus-mode.open { display: flex; }
+.focus-header { padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.focus-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 800; color: #f5f2eb; }
+.focus-close { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: rgba(245,242,235,0.7); border-radius: 7px; padding: 5px 12px; cursor: pointer; font-size: 12px; font-family: 'Instrument Sans', sans-serif; }
+.focus-body { padding: 20px 24px; flex: 1; }
+.focus-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
+.focus-stat { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 9px 14px; }
+.focus-stat-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: #f5f2eb; }
+.focus-stat-label { font-size: 11px; color: rgba(245,242,235,0.45); }
+.focus-section { margin-bottom: 24px; }
+.focus-section-title { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(245,242,235,0.35); margin-bottom: 10px; }
+.focus-deal { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 9px; padding: 12px 14px; margin-bottom: 7px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: background 0.15s; }
+.focus-deal:hover { background: rgba(255,255,255,0.09); }
+.focus-deal-co { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: #f5f2eb; flex: 1; }
+.focus-deal-task { font-size: 11px; color: rgba(245,242,235,0.45); flex: 2; }
+.focus-deal-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); white-space: nowrap; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,24,20,0.5); z-index: 200; backdrop-filter: blur(3px); align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: 14px; padding: 22px; width: 480px; max-width: 95vw; max-height: 90vh; overflow-y: auto; animation: slideUp 0.22s cubic-bezier(0.16,1,0.3,1); }
+.modal-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+.modal-close { width: 24px; height: 24px; border-radius: 5px; border: 1px solid var(--border); background: none; cursor: pointer; font-size: 12px; color: var(--ink3); display: flex; align-items: center; justify-content: center; }
+.form-row { margin-bottom: 11px; }
+.form-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink3); margin-bottom: 4px; display: block; }
+.form-input, .form-select, .form-textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border2); border-radius: 7px; font-family: 'Instrument Sans', sans-serif; font-size: 13px; color: var(--ink); background: white; outline: none; transition: border-color 0.15s; }
+.form-textarea { resize: vertical; min-height: 65px; }
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--ink); }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.btn-cancel { padding: 8px 15px; border-radius: 7px; border: 1px solid var(--border2); background: none; font-family: 'Instrument Sans', sans-serif; font-size: 12px; cursor: pointer; color: var(--ink2); }
+.btn-save { padding: 8px 18px; border-radius: 7px; border: none; background: var(--ink); color: white; font-family: 'Instrument Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; }
+.btn-save:hover { opacity: 0.85; }
+.advance-btns { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
+.advance-btn { padding: 6px 12px; border-radius: 7px; border: 1px solid var(--border2); background: white; font-family: 'Instrument Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.advance-btn.next { background: var(--ink); color: white; border-color: var(--ink); }
+.advance-btn.won { background: var(--green); color: white; border-color: var(--green); }
+.advance-btn.lost { background: #f5f5f5; color: #888; }
+.email-draft { background: var(--bg); border-radius: 9px; padding: 12px; font-size: 12px; line-height: 1.7; color: var(--ink2); margin-top: 8px; white-space: pre-wrap; border: 1px solid var(--border); min-height: 110px; }
+.copy-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border2); background: white; font-size: 11px; font-family: 'Instrument Sans', sans-serif; cursor: pointer; margin-top: 6px; }
+.copy-btn:hover { border-color: var(--ink); }
+
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes slideUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="topbar">
+  <div class="logo"><span class="logo-dot"></span>Pipeline OS</div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="switchPanel('pipeline',this)">Board</div>
+    <div class="nav-tab" onclick="switchPanel('forecast',this)">Forecast</div>
+    <div class="nav-tab" onclick="switchPanel('winrate',this)">Win Rate</div>
+    <div class="nav-tab" onclick="switchPanel('tasks',this)">Tasks</div>
+    <div class="nav-tab" onclick="switchPanel('summary',this)">Weekly</div>
+  </div>
+  <div class="topbar-right">
+    <div class="quota-chip">Q Target: <strong>$85k</strong> MRR</div>
+    <button class="topbar-btn" onclick="openFocusMode()">⚡ Focus</button>
+    <button class="add-deal-btn" onclick="openAddDeal()">+ New Deal</button>
+    <button class="topbar-btn" onclick="openSettings()"><span id="zap-indicator" style="width:7px;height:7px;border-radius:50%;background:#555;display:inline-block"></span> ⚙</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- BOARD -->
+  <div class="panel active" id="panel-pipeline">
+    <div class="pipeline-header">
+      <div class="panel-title" style="margin:0">My Pipeline</div>
+      <div class="filters">
+        <button class="filter-btn active" onclick="filterDeals('all',this)">All</button>
+        <button class="filter-btn" onclick="filterDeals('hot',this)">🔥 Hot</button>
+        <button class="filter-btn" onclick="filterDeals('action',this)">⚡ Action Today</button>
+        <button class="filter-btn" onclick="filterDeals('stale',this)">💤 Stale</button>
+        <button class="filter-btn" onclick="filterDeals('aging',this)">⏰ Aging 7d+</button>
+      </div>
+    </div>
+    <div class="bulk-bar" id="bulkBar">
+      <span id="bulkCount">0 selected</span>
+      <span style="color:rgba(255,255,255,0.4);font-size:11px">Move to:</span>
+      <div id="bulkStageBtns" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+      <button class="bulk-clear" onclick="clearBulk()">✕ Clear</button>
+    </div>
+    <div class="kanban" id="kanban"></div>
+  </div>
+
+  <!-- FORECAST -->
+  <div class="panel" id="panel-forecast">
+    <div class="panel-title">Revenue Forecast</div>
+    <div class="forecast-card" style="margin-bottom:14px;border-color:var(--accent);background:linear-gradient(135deg,#fffaf8,white)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+        <div><div class="fc-label">Quota Attainment — $85k MRR / Quarter</div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-top:3px">
+            <div class="fc-value" id="fc-attainment-pct" style="color:var(--accent)">0%</div>
+            <div style="font-size:11px;color:var(--ink3)" id="fc-attainment-closed"></div>
+          </div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink2)" id="fc-attainment-remaining"></div>
+      </div>
+      <div class="fc-bar" style="height:9px"><div class="fc-bar-fill" id="fc-attainment-bar" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3)">$0</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3)">$85k MRR</div>
+      </div>
+    </div>
+    <div class="forecast-grid">
+      <div class="forecast-card"><div class="fc-label">Committed MRR (Decision+)</div><div class="fc-value" id="fc-committed">$0</div><div class="fc-sub" id="fc-committed-sub"></div><div class="fc-bar"><div class="fc-bar-fill" id="fc-committed-bar" style="width:0%"></div></div></div>
+      <div class="forecast-card"><div class="fc-label">Best Case MRR</div><div class="fc-value" id="fc-best">$0</div><div class="fc-sub" id="fc-best-sub"></div><div class="fc-bar"><div class="fc-bar-fill" id="fc-best-bar" style="width:0%"></div></div></div>
+      <div class="forecast-card"><div class="fc-label">Pipeline Coverage</div><div class="fc-value" id="fc-coverage">0x</div><div class="fc-sub">vs. $85k MRR quota</div></div>
+      <div class="forecast-card"><div class="fc-label">Avg Deal MRR</div><div class="fc-value" id="fc-avg">$0</div><div class="fc-sub" id="fc-avg-sub"></div></div>
+    </div>
+    <div class="stage-breakdown" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px"><div class="breakdown-title">Close by Month</div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3)">Weighted · Closed ✓</div></div>
+      <div id="month-rows"></div>
+    </div>
+    <div class="stage-breakdown"><div class="breakdown-title">MRR by Stage</div><div id="breakdown-rows"></div></div>
+  </div>
+
+  <!-- WIN RATE -->
+  <div class="panel" id="panel-winrate">
+    <div class="panel-title">Win Rate & Pipeline Health</div>
+    <div class="winrate-grid">
+      <div class="winrate-card"><div class="winrate-big" id="wr-overall" style="color:var(--green)">—</div><div class="winrate-label">Overall Win Rate</div></div>
+      <div class="winrate-card"><div class="winrate-big" id="wr-avgdays">—</div><div class="winrate-label">Avg Days to Close</div></div>
+      <div class="winrate-card"><div class="winrate-big" id="wr-avgdeal">—</div><div class="winrate-label">Avg Won Deal MRR</div></div>
+    </div>
+    <div class="stage-breakdown" style="margin-bottom:12px"><div class="breakdown-title">Stage Conversion Funnel</div><div id="funnel-rows"></div></div>
+    <div class="stage-breakdown"><div class="breakdown-title">Pipeline by Source</div><div id="source-rows"></div></div>
+  </div>
+
+  <!-- TASKS -->
+  <div class="panel" id="panel-tasks">
+    <div class="panel-title">Activity & Tasks</div>
+    <div class="tasks-layout">
+      <div class="task-section"><div class="ts-header"><div class="ts-title">Today's Actions</div><div class="ts-count" id="today-count">0</div></div><div id="today-tasks"></div></div>
+      <div class="task-section"><div class="ts-header"><div class="ts-title">Upcoming (7 days)</div><div class="ts-count" id="upcoming-count">0</div></div><div id="upcoming-tasks"></div></div>
+    </div>
+  </div>
+
+  <!-- WEEKLY -->
+  <div class="panel" id="panel-summary">
+    <div class="panel-title">Weekly Summary</div>
+    <div class="summary-grid">
+      <div class="summary-card"><div class="summary-num" id="ws-active" style="color:var(--blue)">—</div><div class="summary-label">Active Deals</div><div class="summary-delta delta-up" id="ws-active-d"></div></div>
+      <div class="summary-card"><div class="summary-num" id="ws-pipeline" style="color:var(--accent)">—</div><div class="summary-label">Weighted Pipeline</div><div class="summary-delta" id="ws-pipeline-d"></div></div>
+      <div class="summary-card"><div class="summary-num" id="ws-stale" style="color:var(--red)">—</div><div class="summary-label">Stale / At Risk</div><div class="summary-delta" id="ws-stale-d"></div></div>
+      <div class="summary-card"><div class="summary-num" id="ws-tasks" style="color:var(--green)">—</div><div class="summary-label">Actions Due Today</div><div class="summary-delta delta-up" id="ws-tasks-d"></div></div>
+    </div>
+    <div class="stage-breakdown" style="margin-bottom:12px"><div class="breakdown-title">Deals Needing Attention</div><div id="attention-list"></div></div>
+    <div class="stage-breakdown"><div class="breakdown-title">Pipeline Health Breakdown</div><div id="health-breakdown"></div></div>
+  </div>
+
+</div></div>
+
+<!-- ADD DEAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeAddDeal()">
+  <div class="modal">
+    <div class="modal-title">New Deal <button class="modal-close" onclick="closeAddDeal()">✕</button></div>
+    <div class="form-row"><label class="form-label">Company</label><input class="form-input" id="f-company" placeholder="Acme Corp"/></div>
+    <div class="form-row"><label class="form-label">Contact</label><input class="form-input" id="f-contact" placeholder="Jane Smith, VP Sales"/></div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0"><label class="form-label">MRR Value ($)</label><input class="form-input" id="f-value" type="number" placeholder="7500"/></div>
+      <div class="form-row" style="margin:0"><label class="form-label">Stage</label>
+        <select class="form-select" id="f-stage">
+          <option value="0">Introduction Made</option><option value="1">Meeting Booked</option>
+          <option value="2">Qualified – Demo Done</option><option value="3">Decision Stage</option>
+          <option value="4">Buying Process</option><option value="5">Closed</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0"><label class="form-label">Source</label>
+        <select class="form-select" id="f-source">
+          <option value="">— Select —</option><option value="Outbound">Outbound</option>
+          <option value="Inbound">Inbound</option><option value="Referral">Referral</option>
+          <option value="Partner">Partner</option><option value="Event">Event</option><option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-row" style="margin:0"><label class="form-label">Close Month</label>
+        <select class="form-select" id="f-month"><option value="M1">Month 1</option><option value="M2">Month 2</option><option value="M3">Month 3</option></select>
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0"><label class="form-label">Next Action</label><input class="form-input" id="f-task" placeholder="Send proposal"/></div>
+      <div class="form-row" style="margin:0"><label class="form-label">Due</label>
+        <select class="form-select" id="f-due"><option value="today">Today</option><option value="soon">This week</option><option value="ok">Later</option></select>
+      </div>
+    </div>
+    <div class="form-row"><label class="form-label">Notes</label><textarea class="form-textarea" id="f-notes" placeholder="Context, objections, stakeholders..."></textarea></div>
+    <div class="modal-footer"><button class="btn-cancel" onclick="closeAddDeal()">Cancel</button><button class="btn-save" onclick="saveDeal()">Add Deal</button></div>
+  </div>
+</div>
+
+<!-- DEAL DETAIL -->
+<div class="modal-overlay" id="detailOverlay" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal" style="width:520px">
+    <div class="modal-title"><span id="detail-company">—</span><button class="modal-close" onclick="closeDetailModal()">✕</button></div>
+    <div style="color:var(--ink3);font-size:12px;margin-bottom:12px" id="detail-contact"></div>
+    <div class="form-row-2" style="margin-bottom:12px">
+      <div><div class="form-label">MRR Value</div><div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;color:var(--green)" id="detail-value"></div></div>
+      <div><div class="form-label">Stage</div><div id="detail-stage" style="font-weight:700;font-size:13px"></div></div>
+    </div>
+    <div class="form-row-2" style="margin-bottom:12px">
+      <div><div class="form-label">Source</div><div id="detail-source" style="font-size:13px"></div></div>
+      <div><div class="form-label">Close Month</div><div id="detail-month" style="font-size:13px;font-weight:600"></div></div>
+    </div>
+    <div style="margin-bottom:12px"><div class="form-label">Next Action</div><div id="detail-task" style="font-size:12px;padding:8px 10px;background:var(--bg);border-radius:7px"></div></div>
+    <div id="detail-notes-wrap" style="margin-bottom:12px;display:none"><div class="form-label">Notes</div><div id="detail-notes" style="font-size:12px;color:var(--ink2);padding:8px 10px;background:var(--bg);border-radius:7px;line-height:1.6"></div></div>
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><div class="form-label" style="margin:0">Deal Health</div><div id="detail-health-label" style="font-family:'JetBrains Mono',monospace;font-size:10px"></div></div>
+      <div class="health-bar" style="height:7px"><div class="health-fill" id="detail-health-bar"></div></div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div class="form-label" style="margin:0">Follow-up Draft</div><button class="copy-btn" onclick="copyEmail()">📋 Copy</button></div>
+      <div class="email-draft" id="email-draft"></div>
+    </div>
+    <div class="form-label" style="margin-bottom:6px">Move Stage</div>
+    <div class="advance-btns" id="advance-btns"></div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="modal-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettingsModal()">
+  <div class="modal">
+    <div class="modal-title">Zapier Integration <button class="modal-close" onclick="closeSettingsModal()">✕</button></div>
+    <div style="background:var(--bg);border-radius:9px;padding:11px 13px;margin-bottom:14px;font-size:12px;line-height:1.6;color:var(--ink2)">
+      <strong style="color:var(--ink)">Setup:</strong> Zapier → New Zap → Trigger: <em>Webhooks → Catch Hook</em> → paste URL → Action: Salesforce → Create/Update Opportunity
+    </div>
+    <div class="form-row"><label class="form-label">Zapier Webhook URL</label><input class="form-input" id="zapier-url" placeholder="https://hooks.zapier.com/hooks/catch/..."/></div>
+    <div style="margin-bottom:14px"><div class="form-label" style="margin-bottom:7px">Trigger on...</div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input type="checkbox" id="zap-stage" checked style="accent-color:var(--accent)"> Stage change</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input type="checkbox" id="zap-new" checked style="accent-color:var(--accent)"> New deal added</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input type="checkbox" id="zap-won" checked style="accent-color:var(--accent)"> Deal Won</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer"><input type="checkbox" id="zap-task" checked style="accent-color:var(--accent)"> Task completed</label>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;align-items:center">
+      <button class="btn-cancel" onclick="testWebhook()" style="color:var(--blue);border-color:var(--blue)">Send test ping</button>
+      <div style="display:flex;gap:8px"><button class="btn-cancel" onclick="closeSettingsModal()">Cancel</button><button class="btn-save" onclick="saveSettings()">Save</button></div>
+    </div>
+    <div id="zap-status" style="margin-top:10px;font-size:11px;text-align:center;display:none"></div>
+  </div>
+</div>
+
+<!-- FOCUS MODE -->
+<div class="focus-mode" id="focusMode">
+  <div class="focus-header">
+    <div class="focus-title">⚡ Focus Mode — Today's Priorities</div>
+    <button class="focus-close" onclick="closeFocusMode()">✕ Exit</button>
+  </div>
+  <div class="focus-body">
+    <div class="focus-stats" id="focus-stats"></div>
+    <div class="focus-section"><div class="focus-section-title">🔥 Hot Deals — Action Required Today</div><div id="focus-hot"></div></div>
+    <div class="focus-section"><div class="focus-section-title">⏰ Aging Deals — Inactive 7d+</div><div id="focus-aging"></div></div>
+    <div class="focus-section"><div class="focus-section-title">📋 All Tasks Due Today</div><div id="focus-tasks"></div></div>
+  </div>
+</div>
+
+<script>
+const STAGES = ['Introduction Made','Meeting Booked','Qualified · Demo Done','Decision Stage','Buying Process','Closed'];
+const STAGE_COLORS = ['#1a1814','#1e3a5f','#2d5a3d','#7a4a00','#5c2d8a','#1a6b3a'];
+const STAGE_WEIGHTS = [0.05,0.15,0.35,0.55,0.80,1.0];
+const QUOTA = 85000;
+function toMRR(arr){return Math.round(arr/12);}
+function fmtMRR(v){return v>=1000?'$'+(v/1000).toFixed(1)+'k':'$'+v;}
+function fmtFull(v){return '$'+Math.round(v).toLocaleString();}
+
+let wonDeals = JSON.parse(localStorage.getItem('wonDeals')||'[]');
+let lostDeals = JSON.parse(localStorage.getItem('lostDeals')||'[]');
+
+let deals = [
+  {id:1,company:'Vertex Systems',contact:'Tom Ellis, CTO',value:420000,stage:4,task:'Send revised contract',due:'today',tag:'hot',days:4,closeMonth:'M1',source:'Outbound',notes:'Enterprise plan interest. Legal review in progress.',lastActivity:4},
+  {id:2,company:'Luminary Health',contact:'Sara Chen, VP Ops',value:276000,stage:3,task:'Follow up on decision timeline',due:'today',tag:'hot',days:2,closeMonth:'M1',source:'Inbound',notes:'Champion is Sara. Need CFO buy-in.',lastActivity:2},
+  {id:3,company:'Forge Analytics',contact:'Mike Patel, Founder',value:180000,stage:2,task:'Send demo recap email',due:'soon',tag:'',days:7,closeMonth:'M2',source:'Referral',notes:'Strong product fit. Budget confirmed.',lastActivity:7},
+  {id:4,company:'Cascade Media',contact:'Dana Rowe, Dir IT',value:540000,stage:5,task:'Countersign agreement',due:'today',tag:'hot',days:1,closeMonth:'M1',source:'Outbound',notes:'',lastActivity:1},
+  {id:5,company:'Orion Logistics',contact:'Paul Wu, COO',value:312000,stage:3,task:'Schedule stakeholder call',due:'soon',tag:'',days:5,closeMonth:'M2',source:'Partner',notes:'3 stakeholders in decision.',lastActivity:5},
+  {id:6,company:'Summit Cloud',contact:'Erin Blake, CEO',value:216000,stage:0,task:'Book intro call',due:'soon',tag:'',days:3,closeMonth:'M3',source:'Event',notes:'Met at SaaStr Annual.',lastActivity:3},
+  {id:7,company:'Pinnacle Retail',contact:'James Ford, CIO',value:468000,stage:4,task:'Review pricing with legal',due:'soon',tag:'hot',days:3,closeMonth:'M1',source:'Outbound',notes:'Competing with Vendor X on price.',lastActivity:3},
+  {id:8,company:'Dawnlight AI',contact:'Priya Nair, CPO',value:144000,stage:1,task:'Confirm demo date',due:'ok',tag:'',days:2,closeMonth:'M2',source:'Inbound',notes:'',lastActivity:2},
+  {id:9,company:'Cobalt Finance',contact:'Ryan Moore, SVP',value:372000,stage:1,task:'Re-engage after no-show',due:'today',tag:'stale',days:18,closeMonth:'M3',source:'Outbound',notes:'Went dark after intro call. Try LinkedIn.',lastActivity:18},
+  {id:10,company:'Meridian Labs',contact:'Olivia Hart, Dir R&D',value:120000,stage:2,task:'Send tailored use case deck',due:'ok',tag:'',days:6,closeMonth:'M2',source:'Referral',notes:'',lastActivity:6},
+];
+let nextId=11, activeFilter='all', selectedIds=new Set();
+
+function calcHealth(d){
+  let s=100;
+  if(d.lastActivity>14)s-=40; else if(d.lastActivity>7)s-=20;
+  if(d.tag==='stale')s-=20;
+  if(!d.task)s-=15;
+  if(d.days>21)s-=25; else if(d.days>14)s-=10;
+  return Math.max(0,Math.min(100,s));
+}
+function hColor(s){return s>=70?'#2d8a4e':s>=40?'#f5c842':'#c0440c';}
+function hLabel(s){return s>=70?'● Healthy':s>=40?'◐ At Risk':'○ Critical';}
+
+// KANBAN
+function renderKanban(){
+  const el=document.getElementById('kanban'); el.innerHTML='';
+  const filtered=deals.filter(d=>{
+    if(activeFilter==='all')return true;
+    if(activeFilter==='hot')return d.tag==='hot';
+    if(activeFilter==='action')return d.due==='today';
+    if(activeFilter==='stale')return d.tag==='stale';
+    if(activeFilter==='aging')return d.lastActivity>=7;
+    return true;
+  });
+  STAGES.forEach((stage,si)=>{
+    const sd=filtered.filter(d=>d.stage===si);
+    const sv=sd.reduce((s,d)=>s+toMRR(d.value),0);
+    const col=document.createElement('div'); col.className='stage-col';
+    col.innerHTML=`<div class="stage-header"><div class="stage-label"><span class="stage-dot" style="background:${STAGE_COLORS[si]}"></span>${stage}</div><div class="stage-meta">${sd.length} · ${fmtMRR(sv)}</div></div>`;
+    sd.forEach(d=>{
+      const h=calcHealth(d);
+      const card=document.createElement('div');
+      card.className='deal-card'+(selectedIds.has(d.id)?' selected':'');
+      card.dataset.stage=si;
+      const bdg=[];
+      if(d.tag==='hot')bdg.push('<span class="deal-badge badge-hot">🔥</span>');
+      if(d.due==='today'&&d.tag!=='stale')bdg.push('<span class="deal-badge badge-task">⚡</span>');
+      if(d.tag==='stale'||d.lastActivity>=14)bdg.push('<span class="deal-badge badge-stale">💤</span>');
+      if(d.closeMonth)bdg.push(`<span class="deal-badge badge-month">${d.closeMonth}</span>`);
+      if(d.source)bdg.push(`<span class="deal-badge badge-source">${d.source}</span>`);
+      const ac=d.lastActivity>=14?'age-danger':d.lastActivity>=7?'age-warn':'age-ok';
+      card.innerHTML=`
+        <div class="deal-select" onclick="toggleSel(event,${d.id})">${selectedIds.has(d.id)?'✓':''}</div>
+        <div class="deal-company">${d.company}</div>
+        <div class="deal-contact">${d.contact}</div>
+        <div class="deal-footer"><div class="deal-value">${fmtMRR(toMRR(d.value))} MRR</div><div class="deal-badges">${bdg.join('')}</div></div>
+        <div class="deal-meta"><span class="${ac}">Active: ${d.lastActivity}d ago</span><span>${d.days}d in stage</span></div>
+        <div class="health-bar"><div class="health-fill" style="width:${h}%;background:${hColor(h)}"></div></div>`;
+      card.onclick=(e)=>{if(!e.target.classList.contains('deal-select'))openDetail(d.id);};
+      col.appendChild(card);
+    });
+    el.appendChild(col);
+  });
+  updateBulkBar();
+}
+
+function toggleSel(e,id){e.stopPropagation();selectedIds.has(id)?selectedIds.delete(id):selectedIds.add(id);renderKanban();}
+function clearBulk(){selectedIds.clear();renderKanban();}
+function updateBulkBar(){
+  const bar=document.getElementById('bulkBar');
+  document.getElementById('bulkCount').textContent=selectedIds.size+' selected';
+  if(selectedIds.size>0){
+    bar.classList.add('visible');
+    const btns=document.getElementById('bulkStageBtns'); btns.innerHTML='';
+    STAGES.forEach((s,si)=>{
+      const b=document.createElement('button'); b.className='bulk-stage-btn'; b.textContent=s;
+      b.onclick=()=>bulkMove(si); btns.appendChild(b);
+    });
+  } else bar.classList.remove('visible');
+}
+function bulkMove(si){
+  const moved=selectedIds.size;
+  selectedIds.forEach(id=>{const d=deals.find(x=>x.id===id);if(d){d.stage=si;d.days=0;if(zapSettings.onStage)sendToZapier('stage_changed',d);}});
+  selectedIds.clear(); renderAll();
+  showToast(`✓ Moved ${moved} deal${moved>1?'s':''} to ${STAGES[si]}`,'green');
+}
+
+// FORECAST
+function renderForecast(){
+  const active=deals.filter(d=>d.stage<5), closed=deals.filter(d=>d.stage===5);
+  const totalMRR=deals.reduce((s,d)=>s+toMRR(d.value),0);
+  const closedMRR=closed.reduce((s,d)=>s+toMRR(d.value),0);
+  const committedMRR=deals.filter(d=>d.stage>=3).reduce((s,d)=>s+toMRR(d.value)*STAGE_WEIGHTS[d.stage],0);
+  const bestMRR=active.reduce((s,d)=>s+toMRR(d.value)*STAGE_WEIGHTS[d.stage],0)+closedMRR;
+  const avgMRR=totalMRR/Math.max(deals.length,1);
+  const attPct=Math.min((closedMRR/QUOTA)*100,100);
+
+  document.getElementById('fc-attainment-pct').textContent=attPct.toFixed(0)+'%';
+  document.getElementById('fc-attainment-closed').textContent=fmtFull(closedMRR)+' MRR closed';
+  document.getElementById('fc-attainment-remaining').textContent=closedMRR<QUOTA?fmtFull(QUOTA-closedMRR)+' to go':'🎉 Quota hit!';
+  document.getElementById('fc-attainment-bar').style.width=attPct+'%';
+  document.getElementById('fc-committed').textContent=fmtFull(committedMRR);
+  document.getElementById('fc-committed-sub').textContent=deals.filter(d=>d.stage>=3&&d.stage<5).length+' deals';
+  document.getElementById('fc-committed-bar').style.width=Math.min((committedMRR/QUOTA)*100,100)+'%';
+  document.getElementById('fc-best').textContent=fmtFull(bestMRR);
+  document.getElementById('fc-best-sub').textContent=active.length+' active + '+closed.length+' closed';
+  document.getElementById('fc-best-bar').style.width=Math.min((bestMRR/QUOTA)*100,100)+'%';
+  document.getElementById('fc-coverage').textContent=(totalMRR/QUOTA).toFixed(1)+'x';
+  document.getElementById('fc-avg').textContent=fmtFull(avgMRR);
+  document.getElementById('fc-avg-sub').textContent=deals.length+' deals';
+
+  const mEl=document.getElementById('month-rows'); mEl.innerHTML='';
+  ['M1','M2','M3'].forEach(m=>{
+    const md=deals.filter(d=>d.closeMonth===m);
+    const mMRR=md.reduce((s,d)=>s+toMRR(d.value)*STAGE_WEIGHTS[d.stage],0);
+    const mCl=md.filter(d=>d.stage===5).reduce((s,d)=>s+toMRR(d.value),0);
+    const pct=Math.min((mMRR/QUOTA)*100,100).toFixed(0);
+    mEl.innerHTML+=`<div class="breakdown-row"><div class="br-stage" style="font-weight:600">${{M1:'Month 1',M2:'Month 2',M3:'Month 3'}[m]}</div><div class="br-track"><div class="br-fill" style="width:${pct}%;background:var(--accent)"></div></div><div class="br-val">${fmtMRR(mMRR)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--green);width:54px;text-align:right">${mCl>0?fmtMRR(mCl)+' ✓':'—'}</div></div>`;
+  });
+  const bEl=document.getElementById('breakdown-rows'); bEl.innerHTML='';
+  STAGES.forEach((s,si)=>{
+    const sv=deals.filter(d=>d.stage===si).reduce((a,d)=>a+toMRR(d.value),0);
+    const pct=totalMRR>0?(sv/totalMRR*100).toFixed(0):0;
+    bEl.innerHTML+=`<div class="breakdown-row"><div class="br-stage">${s}</div><div class="br-track"><div class="br-fill" style="width:${pct}%;background:${STAGE_COLORS[si]}"></div></div><div class="br-val">${fmtMRR(sv)}</div><div class="br-pct">${pct}%</div></div>`;
+  });
+}
+
+// WIN RATE
+function renderWinRate(){
+  const total=wonDeals.length+lostDeals.length;
+  const wr=total>0?Math.round((wonDeals.length/total)*100):0;
+  const avgDays=wonDeals.length>0?Math.round(wonDeals.reduce((s,d)=>s+(d.daysToClose||30),0)/wonDeals.length):0;
+  const avgDeal=wonDeals.length>0?Math.round(wonDeals.reduce((s,d)=>s+toMRR(d.value),0)/wonDeals.length):0;
+  document.getElementById('wr-overall').textContent=wr+'%';
+  document.getElementById('wr-avgdays').textContent=avgDays||'—';
+  document.getElementById('wr-avgdeal').textContent=avgDeal?fmtMRR(avgDeal):'—';
+
+  const fEl=document.getElementById('funnel-rows'); fEl.innerHTML='';
+  const counts=STAGES.map((s,si)=>deals.filter(d=>d.stage===si).length);
+  const max=Math.max(...counts,1);
+  STAGES.forEach((s,si)=>{
+    const pct=Math.round((counts[si]/max)*100);
+    fEl.innerHTML+=`<div class="funnel-row"><div class="funnel-label">${s}</div><div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${pct}%;background:${STAGE_COLORS[si]}">${counts[si]}</div></div><div class="funnel-pct">${pct}%</div></div>`;
+  });
+
+  const srcs={};
+  deals.forEach(d=>{if(d.source)srcs[d.source]=(srcs[d.source]||0)+toMRR(d.value);});
+  const totSrc=Object.values(srcs).reduce((a,b)=>a+b,0)||1;
+  const sEl=document.getElementById('source-rows'); sEl.innerHTML='';
+  Object.entries(srcs).sort((a,b)=>b[1]-a[1]).forEach(([src,val])=>{
+    const pct=Math.round((val/totSrc)*100);
+    sEl.innerHTML+=`<div class="breakdown-row"><div class="br-stage">${src}</div><div class="br-track"><div class="br-fill" style="width:${pct}%;background:var(--purple)"></div></div><div class="br-val">${fmtMRR(val)}</div><div class="br-pct">${pct}%</div></div>`;
+  });
+}
+
+// TASKS
+function renderTasks(){
+  const today=deals.filter(d=>d.due==='today'&&d.task);
+  const upcoming=deals.filter(d=>d.due==='soon'&&d.task);
+  document.getElementById('today-count').textContent=today.length;
+  document.getElementById('upcoming-count').textContent=upcoming.length;
+  function rl(arr,id){
+    const el=document.getElementById(id);
+    if(!arr.length){el.innerHTML='<div style="color:var(--ink3);font-size:12px;padding:12px 0">All clear ✓</div>';return;}
+    el.innerHTML=arr.map(d=>`<div class="task-item ${d.taskDone?'done':''}" onclick="toggleTask(${d.id})"><div class="task-check">${d.taskDone?'✓':''}</div><div style="flex:1"><div class="task-text">${d.task}</div><div class="task-company">${d.company} · ${STAGES[d.stage]}</div></div><div class="task-due ${d.due==='today'?'due-today':d.due==='soon'?'due-soon':'due-ok'}">${d.due==='today'?'Today':'This week'}</div></div>`).join('');
+  }
+  rl(today,'today-tasks'); rl(upcoming,'upcoming-tasks');
+}
+function toggleTask(id){const d=deals.find(x=>x.id===id);if(d){d.taskDone=!d.taskDone;if(d.taskDone&&zapSettings.onTask)sendToZapier('task_completed',d);renderTasks();}}
+
+// WEEKLY SUMMARY
+function renderSummary(){
+  const active=deals.filter(d=>d.stage<5);
+  const staleC=deals.filter(d=>d.tag==='stale'||d.lastActivity>=14).length;
+  const todayT=deals.filter(d=>d.due==='today').length;
+  const pipeMRR=active.reduce((s,d)=>s+toMRR(d.value)*STAGE_WEIGHTS[d.stage],0);
+  document.getElementById('ws-active').textContent=active.length;
+  document.getElementById('ws-pipeline').textContent=fmtMRR(pipeMRR);
+  document.getElementById('ws-stale').textContent=staleC;
+  document.getElementById('ws-tasks').textContent=todayT;
+  document.getElementById('ws-active-d').textContent='↑ '+deals.filter(d=>d.days<=3).length+' new this week';
+  const sd=document.getElementById('ws-stale-d');
+  sd.textContent=staleC>0?'⚠ needs attention':'✓ all healthy';
+  sd.className='summary-delta '+(staleC>0?'delta-down':'delta-up');
+
+  const attn=deals.filter(d=>d.lastActivity>=7||d.tag==='stale').sort((a,b)=>b.lastActivity-a.lastActivity);
+  const aEl=document.getElementById('attention-list');
+  aEl.innerHTML=attn.length?attn.map(d=>{const h=calcHealth(d);return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)"><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:12px">${d.company}</div><div style="font-size:11px;color:var(--ink3)">${STAGES[d.stage]} · Last active ${d.lastActivity}d ago</div></div><div style="font-size:11px;font-weight:600;color:${hColor(h)}">${hLabel(h)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green)">${fmtMRR(toMRR(d.value))}</div></div>`;}).join('')
+    :'<div style="color:var(--ink3);font-size:12px;padding:10px 0">✓ No deals need attention</div>';
+
+  const healthy=deals.filter(d=>calcHealth(d)>=70).length;
+  const atRisk=deals.filter(d=>calcHealth(d)>=40&&calcHealth(d)<70).length;
+  const critical=deals.filter(d=>calcHealth(d)<40).length;
+  document.getElementById('health-breakdown').innerHTML=`<div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div style="flex:1;background:var(--green-lt);border-radius:9px;padding:12px;text-align:center"><div style="font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;color:var(--green)">${healthy}</div><div style="font-size:11px;color:var(--green)">Healthy</div></div>
+    <div style="flex:1;background:var(--yellow-lt);border-radius:9px;padding:12px;text-align:center"><div style="font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;color:#9a7200">${atRisk}</div><div style="font-size:11px;color:#9a7200">At Risk</div></div>
+    <div style="flex:1;background:var(--red-lt);border-radius:9px;padding:12px;text-align:center"><div style="font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;color:var(--red)">${critical}</div><div style="font-size:11px;color:var(--red)">Critical</div></div>
+  </div>`;
+}
+
+// FOCUS MODE
+function openFocusMode(){
+  const hot=deals.filter(d=>d.tag==='hot'&&d.due==='today');
+  const aging=deals.filter(d=>d.lastActivity>=7).sort((a,b)=>b.lastActivity-a.lastActivity).slice(0,6);
+  const tasks=deals.filter(d=>d.due==='today'&&d.task);
+  const pipeMRR=deals.filter(d=>d.stage<5).reduce((s,d)=>s+toMRR(d.value)*STAGE_WEIGHTS[d.stage],0);
+  document.getElementById('focus-stats').innerHTML=[
+    {v:hot.length,l:'Hot Today'},{v:tasks.length,l:'Actions Due'},{v:aging.length,l:'Aging 7d+'},{v:fmtMRR(pipeMRR),l:'Weighted Pipeline'}
+  ].map(s=>`<div class="focus-stat"><div class="focus-stat-val">${s.v}</div><div class="focus-stat-label">${s.l}</div></div>`).join('');
+  const rd=(arr,id)=>{const el=document.getElementById(id);el.innerHTML=arr.length?arr.map(d=>`<div class="focus-deal" onclick="closeFocusMode();openDetail(${d.id})"><div class="focus-deal-co">${d.company}</div><div class="focus-deal-task">${d.task||'No action set'}</div><div class="focus-deal-val">${fmtMRR(toMRR(d.value))}</div></div>`).join(''):'<div style="color:rgba(245,242,235,0.3);font-size:12px;padding:8px 0">None right now ✓</div>';};
+  rd(hot,'focus-hot'); rd(aging,'focus-aging'); rd(tasks,'focus-tasks');
+  document.getElementById('focusMode').classList.add('open');
+}
+function closeFocusMode(){document.getElementById('focusMode').classList.remove('open');}
+
+// EMAIL DRAFT
+function generateDraft(d){
+  const name=d.contact?.split(',')[0]||'there';
+  const emails=[
+    `Hi ${name},\n\nFollowing up on our recent introduction — I'd love to grab 20 minutes to show you how we've been helping companies like ${d.company} [solve key pain point].\n\nAre you free this week for a quick call?\n\nBest,\n[Your name]`,
+    `Hi ${name},\n\nLooking forward to our upcoming demo! Wanted to send a quick agenda so we make the most of our time.\n\nIf there are specific use cases you'd like me to cover, please send them over beforehand.\n\nSee you soon,\n[Your name]`,
+    `Hi ${name},\n\nThanks for your time in our demo. Based on what you shared, I see a strong fit — especially around [key use case].\n\nWould you be open to a 30-min call to align on timeline and next steps?\n\nBest,\n[Your name]`,
+    `Hi ${name},\n\nJust checking in as you work through your decision. Happy to answer questions, provide references, or set up a technical deep-dive with our team.\n\nWhat would be most helpful right now?\n\nBest,\n[Your name]`,
+    `Hi ${name},\n\nExcited to be in the final stretch! Wanted to check in on the contract review — anything I can help move along on our end?\n\nAlso happy to get a kickoff call on the calendar so your team hits the ground running from day one.\n\nLooking forward to closing this out,\n[Your name]`,
+    `Hi ${name},\n\nWelcome to the team! We're thrilled to have ${d.company} on board.\n\nYour dedicated CSM will reach out within 24 hours to schedule your kickoff call.\n\nExcited for what's ahead,\n[Your name]`
+  ];
+  return emails[d.stage]||emails[0];
+}
+function copyEmail(){navigator.clipboard.writeText(document.getElementById('email-draft').textContent).then(()=>showToast('✓ Copied','green'));}
+
+// DEAL DETAIL
+function openDetail(id){
+  const d=deals.find(x=>x.id===id);
+  document.getElementById('detail-company').textContent=d.company;
+  document.getElementById('detail-contact').textContent=d.contact;
+  document.getElementById('detail-value').textContent=fmtFull(toMRR(d.value))+' MRR';
+  document.getElementById('detail-stage').textContent=STAGES[d.stage];
+  document.getElementById('detail-stage').style.color=STAGE_COLORS[d.stage];
+  document.getElementById('detail-source').textContent=d.source||'—';
+  document.getElementById('detail-month').textContent={M1:'Month 1',M2:'Month 2',M3:'Month 3'}[d.closeMonth]||'—';
+  document.getElementById('detail-task').textContent=d.task||'No next action set';
+  const nw=document.getElementById('detail-notes-wrap');
+  if(d.notes){nw.style.display='block';document.getElementById('detail-notes').textContent=d.notes;}else nw.style.display='none';
+  const h=calcHealth(d);
+  document.getElementById('detail-health-bar').style.cssText=`width:${h}%;background:${hColor(h)}`;
+  document.getElementById('detail-health-label').style.color=hColor(h);
+  document.getElementById('detail-health-label').textContent=hLabel(h)+' ('+h+'%)';
+  document.getElementById('email-draft').textContent=generateDraft(d);
+  const btns=document.getElementById('advance-btns'); btns.innerHTML='';
+  if(d.stage<STAGES.length-1){const b=document.createElement('button');b.className='advance-btn next';b.textContent='→ '+STAGES[d.stage+1];b.onclick=()=>moveStage(id,d.stage+1);btns.appendChild(b);}
+  if(d.stage>0){const b=document.createElement('button');b.className='advance-btn';b.textContent='← '+STAGES[d.stage-1];b.onclick=()=>moveStage(id,d.stage-1);btns.appendChild(b);}
+  const wb=document.createElement('button');wb.className='advance-btn won';wb.textContent='🎉 Won';wb.onclick=()=>markWon(id);btns.appendChild(wb);
+  const lb=document.createElement('button');lb.className='advance-btn lost';lb.textContent='✕ Lost';lb.onclick=()=>markLost(id);btns.appendChild(lb);
+  document.getElementById('detailOverlay').classList.add('open');
+}
+function closeDetailModal(){document.getElementById('detailOverlay').classList.remove('open');}
+function moveStage(id,s){const d=deals.find(x=>x.id===id);d.stage=s;d.days=0;if(zapSettings.onStage)sendToZapier('stage_changed',d);closeDetailModal();renderAll();}
+function markWon(id){
+  const d=deals.find(x=>x.id===id);
+  wonDeals.push({...d,daysToClose:d.days+d.lastActivity});
+  localStorage.setItem('wonDeals',JSON.stringify(wonDeals));
+  if(zapSettings.onWon)sendToZapier('deal_won',d);
+  deals=deals.filter(x=>x.id!==id);closeDetailModal();renderAll();showToast('🎉 Won: '+d.company,'green');
+}
+function markLost(id){
+  const d=deals.find(x=>x.id===id);
+  lostDeals.push(d);localStorage.setItem('lostDeals',JSON.stringify(lostDeals));
+  sendToZapier('deal_lost',d);deals=deals.filter(x=>x.id!==id);closeDetailModal();renderAll();
+}
+
+// ADD DEAL
+function openAddDeal(){document.getElementById('modalOverlay').classList.add('open');}
+function closeAddDeal(){document.getElementById('modalOverlay').classList.remove('open');}
+function saveDeal(){
+  const co=document.getElementById('f-company').value.trim();
+  if(!co){document.getElementById('f-company').focus();return;}
+  const nd={id:nextId++,company:co,contact:document.getElementById('f-contact').value.trim()||'Unknown',
+    value:(parseInt(document.getElementById('f-value').value)||0)*12,
+    stage:parseInt(document.getElementById('f-stage').value),
+    source:document.getElementById('f-source').value,
+    closeMonth:document.getElementById('f-month').value,
+    task:document.getElementById('f-task').value.trim(),
+    due:document.getElementById('f-due').value,
+    notes:document.getElementById('f-notes').value.trim(),
+    tag:'',days:0,lastActivity:0,taskDone:false};
+  deals.push(nd);if(zapSettings.onNew)sendToZapier('deal_created',nd);
+  closeAddDeal();
+  ['f-company','f-contact','f-value','f-task','f-notes'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('f-stage').value='0';document.getElementById('f-month').value='M1';
+  renderAll();showToast('✓ Deal added: '+co,'green');
+}
+
+// NAV
+function switchPanel(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');el.classList.add('active');renderAll();
+}
+function filterDeals(f,el){activeFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderKanban();}
+
+// ZAPIER
+let zapSettings={url:localStorage.getItem('zapier_url')||'',onStage:true,onNew:true,onWon:true,onTask:true};
+function openSettings(){document.getElementById('zapier-url').value=zapSettings.url;document.getElementById('settingsOverlay').classList.add('open');}
+function closeSettingsModal(){document.getElementById('settingsOverlay').classList.remove('open');}
+function saveSettings(){
+  zapSettings.url=document.getElementById('zapier-url').value.trim();
+  zapSettings.onStage=document.getElementById('zap-stage').checked;
+  zapSettings.onNew=document.getElementById('zap-new').checked;
+  zapSettings.onWon=document.getElementById('zap-won').checked;
+  zapSettings.onTask=document.getElementById('zap-task').checked;
+  localStorage.setItem('zapier_url',zapSettings.url);
+  closeSettingsModal();updateZapDot();showToast(zapSettings.url?'✓ Zapier connected':'Zapier disconnected',zapSettings.url?'green':'gray');
+}
+function updateZapDot(){const el=document.getElementById('zap-indicator');if(el)el.style.background=zapSettings.url?'#2d8a4e':'#555';}
+async function sendToZapier(event,d){
+  if(!zapSettings.url)return;
+  try{await fetch(zapSettings.url,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({event,timestamp:new Date().toISOString(),deal:{company:d.company,contact:d.contact,mrr_value:toMRR(d.value),arr_value:d.value,stage:STAGES[d.stage],stage_number:d.stage+1,next_action:d.task,close_month:d.closeMonth,source:d.source,days_in_stage:d.days,last_activity_days:d.lastActivity}}),mode:'no-cors'});
+    showToast('↑ Synced to Zapier','green');
+  }catch(e){showToast('⚠ Sync failed','red');}
+}
+async function testWebhook(){
+  const url=document.getElementById('zapier-url').value.trim();
+  if(!url){showZapStatus('Enter a URL first','red');return;}
+  showZapStatus('Sending...','gray');
+  try{await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:'test',message:'Pipeline OS test ping',timestamp:new Date().toISOString()}),mode:'no-cors'});showZapStatus('✓ Sent — check Zapier history','green');}
+  catch(e){showZapStatus('⚠ Failed','red');}
+}
+function showZapStatus(msg,color){const el=document.getElementById('zap-status');el.style.display='block';el.style.color=color==='green'?'var(--green)':color==='red'?'var(--red)':'var(--ink3)';el.textContent=msg;}
+function showToast(msg,color){
+  const t=document.createElement('div');
+  const bg=color==='green'?'#1a6b3a':color==='red'?'#c0440c':'#555';
+  t.style.cssText=`position:fixed;top:64px;right:18px;background:${bg};color:white;padding:8px 14px;border-radius:8px;font-family:Syne,sans-serif;font-weight:700;font-size:12px;z-index:9999;animation:fadeIn 0.2s ease;pointer-events:none`;
+  t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
+}
+
+function renderAll(){renderKanban();renderForecast();renderWinRate();renderTasks();renderSummary();}
+renderAll();updateZapDot();
+</script>
+</body>
+</html>
