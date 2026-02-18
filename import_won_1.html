@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pipeline OS — Import Closed Won</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #1a1814; color: #f5f2eb; font-family: 'Instrument Sans', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.card { background: #242018; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 36px; width: 560px; }
+.logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; display: flex; align-items: center; gap: 8px; margin-bottom: 28px; }
+.logo-dot { width: 8px; height: 8px; background: #2d8a4e; border-radius: 50%; }
+h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.6rem; letter-spacing: -0.03em; margin-bottom: 8px; }
+.sub { color: rgba(245,242,235,0.5); font-size: 13px; margin-bottom: 24px; line-height: 1.6; }
+.stat-row { display: flex; gap: 10px; margin-bottom: 20px; }
+.stat { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; text-align: center; }
+.stat-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.4rem; }
+.stat-label { font-size: 11px; color: rgba(245,242,235,0.4); margin-top: 4px; }
+.green { color: #2d8a4e; } .yellow { color: #f5c842; }
+.progress-wrap { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 16px; margin-bottom: 22px; }
+.progress-label { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: rgba(245,242,235,0.4); margin-bottom: 8px; }
+.progress-bar { height: 10px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden; margin-bottom: 8px; }
+.progress-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #2d8a4e, #f5c842); width: 55.5%; }
+.progress-pct { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; color: #f5c842; }
+.progress-sub { font-size: 11px; color: rgba(245,242,235,0.4); margin-top: 2px; }
+.import-btn { width: 100%; padding: 14px; background: #2d8a4e; color: white; border: none; border-radius: 10px; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; cursor: pointer; transition: opacity 0.15s; }
+.import-btn:hover { opacity: 0.88; }
+.import-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.log { margin-top: 20px; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(245,242,235,0.6); max-height: 200px; overflow-y: auto; display: none; }
+.log.visible { display: block; }
+.log-line { margin-bottom: 4px; }
+.log-line.ok { color: #2d8a4e; }
+.log-line.err { color: #c0440c; }
+.done-msg { margin-top: 18px; background: rgba(45,138,78,0.12); border: 1px solid rgba(45,138,78,0.3); border-radius: 10px; padding: 14px; font-size: 13px; color: #2d8a4e; display: none; text-align: center; font-weight: 600; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><span class="logo-dot"></span>Pipeline OS</div>
+  <h1>Import Closed Won — Q1 '26</h1>
+  <p class="sub">20 closed won deals using Pro-rated Booked MRR. Updates your Forecast quota attainment and Win Rate tabs with real Q1 numbers.</p>
+  <div class="stat-row">
+    <div class="stat"><div class="stat-val green">20</div><div class="stat-label">Deals Won</div></div>
+    <div class="stat"><div class="stat-val green">$47,188</div><div class="stat-label">Pro-rated MRR</div></div>
+    <div class="stat"><div class="stat-val yellow">$37,812</div><div class="stat-label">MRR to Quota</div></div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-label"><span>Q1 Quota Attainment</span><span>$85,000 target</span></div>
+    <div class="progress-bar"><div class="progress-fill"></div></div>
+    <div class="progress-pct">55.5%</div>
+    <div class="progress-sub">$47,188 closed · $37,812 remaining</div>
+  </div>
+  <button class="import-btn" id="importBtn" onclick="runImport()">Import 20 Closed Won Deals →</button>
+  <div class="log" id="log"></div>
+  <div class="done-msg" id="doneMsg">✓ All 20 deals imported!<br>Head back to Pipeline OS — your Forecast tab now shows your real Q1 attainment.</div>
+</div>
+<script>
+const SUPABASE_URL = 'https://ggvceodfeitkgofzokuh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdndmNlb2RmZWl0a2dvZnpva3VoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzODI5MDYsImV4cCI6MjA4Njk1ODkwNn0.6tAtSCfGD-M_hzgZfYAeBsp0BaySvTXzoaTxAYD_X6I';
+const WON = [{"company": "Flaunt Cases", "contact": "FLAUNT Cases", "value": 26988, "source": "Inbound", "days_to_close": 60, "closed_at": "2026-02-17T00:00:00"}, {"company": "Marlo Laz", "contact": "Marlo Laz_Q1_ND", "value": 21984, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-02-17T00:00:00"}, {"company": "Mondo Mondo", "contact": "Mondo Mondo Q1'26 ND", "value": 28680, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-02-11T00:00:00"}, {"company": "MANGO", "contact": "Mango_Q1_2026_ND", "value": 35988, "source": "Partner", "days_to_close": 60, "closed_at": "2026-02-10T00:00:00"}, {"company": "Lovesac", "contact": "Lovesac Q1'26 ND", "value": 23988, "source": "Inbound", "days_to_close": 60, "closed_at": "2026-02-09T00:00:00"}, {"company": "Barbara Katz", "contact": "Barbara Katz Q1'26 ND", "value": 23988, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-02-09T00:00:00"}, {"company": "Packed Party", "contact": "Packed Party Q1'26 ND", "value": 32787, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-02-09T00:00:00"}, {"company": "ESSEN", "contact": "ESSEN_Q4_ND", "value": 31188, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-02-02T00:00:00"}, {"company": "Celluma", "contact": "Celluma_Q1_ND", "value": 31988, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-02-02T00:00:00"}, {"company": "Privet Beauty", "contact": "Privet Beauty Q1 2026 ND", "value": 31188, "source": "Partner", "days_to_close": 60, "closed_at": "2026-01-29T00:00:00"}, {"company": "Sock Candy", "contact": "Sock Candy Q1 ND", "value": 31188, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-01-28T00:00:00"}, {"company": "Eriness Jewelry", "contact": "Eriness Jewelry_Q3_ND", "value": 31188, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-01-28T00:00:00"}, {"company": "Yuni Buffa", "contact": "Yuni Buffa Q1 2026 ND", "value": 31188, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-01-23T00:00:00"}, {"company": "Autumn Sonata", "contact": "Autumn Sonata_Q1_ND", "value": 16992, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-01-23T00:00:00"}, {"company": "Goldbergh", "contact": "Goldbergh Q4 ND", "value": 26988, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-01-22T00:00:00"}, {"company": "Dear Frances", "contact": "Dear Frances Q4 2025 ND", "value": 31188, "source": "Inbound", "days_to_close": 60, "closed_at": "2026-01-21T00:00:00"}, {"company": "Juni", "contact": "Juni", "value": 33588, "source": "Partner", "days_to_close": 60, "closed_at": "2026-01-21T00:00:00"}, {"company": "American Dream Clubhouse", "contact": "American Dream Clubhouse Q1 2026 ND", "value": 11988, "source": "Inbound", "days_to_close": 60, "closed_at": "2026-01-20T00:00:00"}, {"company": "The Mahjong Line", "contact": "The Mahjong Line_Q3_ND", "value": 31188, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-01-20T00:00:00"}, {"company": "Bondi Born", "contact": "Bondi Born Q4 ND", "value": 31988, "source": "Outbound", "days_to_close": 60, "closed_at": "2026-01-13T00:00:00"}];
+
+function log(msg, type='') {
+  const el = document.getElementById('log');
+  el.classList.add('visible');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  line.textContent = msg; el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sbFetch(method, path, body) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    method,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const text = await res.text();
+  return { ok: res.ok, status: res.status, data: text ? JSON.parse(text) : [] };
+}
+
+async function runImport() {
+  const btn = document.getElementById('importBtn');
+  btn.disabled = true; btn.textContent = 'Importing...';
+
+  log('Clearing any existing won deals...');
+  const del = await sbFetch('DELETE', 'won_deals?id=gte.0');
+  if (!del.ok) { log('Error clearing: ' + JSON.stringify(del.data), 'err'); btn.disabled=false; return; }
+  log('✓ Cleared', 'ok');
+
+  log('Uploading ' + WON.length + ' closed won deals...');
+  const ins = await sbFetch('POST', 'won_deals', WON);
+  if (!ins.ok) { log('Error: ' + JSON.stringify(ins.data), 'err'); btn.disabled=false; btn.textContent='Import 20 Closed Won Deals →'; return; }
+  log('✓ ' + ins.data.length + ' deals imported successfully', 'ok');
+  log('✓ Forecast and Win Rate tabs will now reflect real Q1 data', 'ok');
+  btn.textContent = '✓ Import Complete';
+  document.getElementById('doneMsg').style.display = 'block';
+}
+</script>
+</body>
+</html>
